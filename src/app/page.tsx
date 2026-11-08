@@ -1,26 +1,49 @@
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { SignOutButton } from "@/components/SignOutButton";
+import { AppHeader } from "@/components/AppHeader";
+import { DocumentLists } from "@/components/DocumentLists";
 
 export const dynamic = "force-dynamic";
 
-// Placeholder home page — replaced by the document list in the editor step.
 export default async function HomePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  // Same queries as GET /api/documents, run directly on the server for a fast first render.
+  const [owned, shares] = await Promise.all([
+    prisma.document.findMany({
+      where: { ownerId: user.id },
+      select: { id: true, title: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.documentShare.findMany({
+      where: { userId: user.id },
+      select: {
+        role: true,
+        document: {
+          select: { id: true, title: true, updatedAt: true, owner: { select: { name: true } } },
+        },
+      },
+      orderBy: { document: { updatedAt: "desc" } },
+    }),
+  ]);
+
   return (
-    <main className="mx-auto max-w-3xl p-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Ajaia Docs</h1>
-        <div className="flex items-center gap-3 text-sm text-slate-600">
-          <span>
-            Signed in as <strong className="text-slate-900">{user.name}</strong>
-          </span>
-          <SignOutButton />
-        </div>
-      </header>
-      <p className="mt-8 text-slate-600">Your documents will appear here.</p>
-    </main>
+    <>
+      <AppHeader userName={user.name} />
+      <main className="mx-auto max-w-5xl px-4 py-8">
+        <DocumentLists
+          owned={owned.map((d) => ({ ...d, updatedAt: d.updatedAt.toISOString() }))}
+          shared={shares.map(({ role, document }) => ({
+            id: document.id,
+            title: document.title,
+            updatedAt: document.updatedAt.toISOString(),
+            ownerName: document.owner.name,
+            role,
+          }))}
+        />
+      </main>
+    </>
   );
 }
