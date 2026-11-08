@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { EditorContent, useEditor, type JSONContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import { editorExtensions } from "@/lib/editor-extensions";
 import { AlertTriangle, ArrowLeft, Check, CloudOff, Eye, Loader2, Share2, Trash2 } from "lucide-react";
 import { EditorToolbar } from "@/components/EditorToolbar";
 import { ShareDialog, type Collaborator } from "@/components/ShareDialog";
@@ -44,7 +44,7 @@ export function DocumentEditor({ document: doc, role }: { document: EditorDocume
   const saveRef = useRef<() => Promise<void>>(async () => {});
 
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] } })],
+    extensions: editorExtensions,
     content: doc.content,
     editable: canEdit,
     immediatelyRender: false, // avoid SSR hydration mismatch in Next.js
