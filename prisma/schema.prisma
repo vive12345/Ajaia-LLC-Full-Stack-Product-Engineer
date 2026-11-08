@@ -1,0 +1,60 @@
+// Data model — see docs/architecture/02_Deep_Dive_Into_Database.pdf
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (runtime)
+  directUrl = env("DIRECT_URL")   // direct (migrations)
+}
+
+enum ShareRole {
+  VIEWER
+  EDITOR
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  ownedDocuments Document[]      @relation("DocumentOwner")
+  shares         DocumentShare[]
+
+  @@map("users")
+}
+
+model Document {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerId   String   @map("owner_id") @db.Uuid
+  title     String   @db.VarChar(200)
+  content   Json     @default("{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\"}]}")
+  // Optimistic concurrency: a save must send the version it loaded; stale saves get 409.
+  version   Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  owner  User            @relation("DocumentOwner", fields: [ownerId], references: [id])
+  shares DocumentShare[]
+
+  @@index([ownerId, updatedAt(sort: Desc)], map: "idx_documents_owner_updated")
+  @@map("documents")
+}
+
+model DocumentShare {
+  id         String    @id @default(uuid()) @db.Uuid
+  documentId String    @map("document_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  role       ShareRole @default(VIEWER)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, userId], map: "unique_document_share")
+  @@index([userId, documentId], map: "idx_shares_user_document")
+  @@map("document_shares")
+}
