@@ -12,7 +12,12 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html", "json-summary"],
       // Measure the core business logic, not UI glue.
-      include: ["src/lib/access.ts", "src/lib/validation.ts", "src/lib/import.ts"],
+      include: [
+        "src/lib/session.ts",
+        "src/lib/access.ts",
+        "src/lib/validation.ts",
+        "src/lib/import.ts",
+      ],
       thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
     },
   },
