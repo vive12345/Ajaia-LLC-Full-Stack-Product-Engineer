@@ -14,6 +14,7 @@ export default defineConfig({
       // Measure the core business logic, not UI glue.
       include: [
         "src/lib/session.ts",
+        "src/lib/http.ts",
         "src/lib/access.ts",
         "src/lib/validation.ts",
         "src/lib/import.ts",

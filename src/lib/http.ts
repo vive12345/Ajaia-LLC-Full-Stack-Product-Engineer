@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 /** An error that maps directly to an HTTP status and a user-safe message. */
@@ -21,13 +21,22 @@ export function jsonError(status: number, error: string) {
   return NextResponse.json({ error }, { status });
 }
 
+/** Parse a JSON request body, turning malformed JSON into a 400. */
+export async function readJson(req: Request): Promise<unknown> {
+  try {
+    return await req.json();
+  } catch {
+    throw badRequest("Request body must be valid JSON.");
+  }
+}
+
 /**
  * CSRF defense for cookie-authenticated, state-changing requests.
  * Browsers always send `Origin` on cross-site POST/PATCH/DELETE; if it doesn't
  * match our host, reject. Requests without Origin (curl, server-to-server)
  * can't carry a victim's cookies via a malicious site, so they are allowed.
  */
-export function assertSameOrigin(req: NextRequest) {
+export function assertSameOrigin(req: Pick<Request, "headers">) {
   const origin = req.headers.get("origin");
   if (!origin) return;
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
